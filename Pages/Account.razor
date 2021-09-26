@@ -1,0 +1,180 @@
+@page "/Account"
+@layout CustomLayout
+@using ECNcloud.Data
+@using System.IO
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject UserkeyServices _service
+@inject UserkeyServices _userkeyServices
+@inject ProtectedLocalStorage _protectedLocalStorage
+
+<div style="width: 300px; margin: auto;">
+    <button class="btn btn-secondary" @onclick="CheckAccountStatus"><h3>Check account status</h3></button>
+    <h4 hidden="@(hideSuccess)" style="color: #23ab87;">Logged in</h4>
+    <h4 hidden="@(hideFailure)" style="color: #ed2939;">Not logged in</h4>
+</div>
+<br/>
+<br/>
+<br/>
+<div style="width: 100%; display: table;">
+    <div style="display: table-row">
+        <div style="width: 50%; display: table-cell;">
+            <h2>Generate new account</h2>
+            <h4>Write this down! Without it, you cannot log in.</h4>
+            <h4></h4>
+
+            <p>User key @(key)</p>
+            <br>
+            <p>User subdirectory path @(dir)</p>
+            <br>
+            <h5>Choose a display name (optional):</h5>
+            <input @bind="displayName">
+            <br>
+            <h6>
+                NOTE: This is
+                <b>
+                    <i>not</i>
+                </b> your username. Please log in with your
+                <b>
+                    <i>user key</i>
+                </b>.
+            </h6>
+            <br>
+            <button class="btn btn-secondary" @onclick="StoreToDatabase">Generate new account!</button>
+        </div>
+        <div style="display: table-cell;">
+            <h2>Login</h2>
+            <input @bind="inputtedKey"/>
+            <p @bind="message"></p>
+            <button class="btn btn-secondary" @onclick="Read">Read</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    string key;
+    string dir;
+    string displayName;
+
+    string inputtedKey;
+    string correspondingDirectory;
+    string correspondingDisplayName;
+    string message;
+
+    string checkKey;
+    string checkDir;
+    string isLoggedIn;
+    bool hideSuccess = true;
+    bool hideFailure = true;
+
+    List<Userkey> _userkeys = new List<Userkey>();
+
+    public Userkey NewUserkey { get; set; } = new();
+
+    private async Task RefreshUserkeys()
+    {
+        _userkeys = await _service.GetUserkeyAsync();
+    }
+
+    private async Task AddNewUserkey()
+    {
+        await _service.AddUserkeyAsync(NewUserkey);
+        NewUserkey = new Userkey();
+        await RefreshUserkeys();
+    }
+
+    private void StoreToDatabase()
+    {
+        NewUserkey = new Userkey();
+        Rng rng = new Rng();
+        string[] returns = rng.GetKeys();
+        NewUserkey.Key = returns[0];
+        NewUserkey.Subdirectory = returns[1];
+        NewUserkey.DisplayName = displayName;
+        AddNewUserkey();
+        key = returns[0];
+        dir = returns[1];
+        SaveUserkey();
+        Directory.CreateDirectory($"wwwroot/files/{dir}");
+    }
+
+    public async Task SaveUserkey()
+    {
+        await _protectedLocalStorage.SetAsync("userkey", key);
+        await _protectedLocalStorage.SetAsync("userdir", dir);
+        await _protectedLocalStorage.SetAsync("dname", displayName);
+
+        var result = await _protectedLocalStorage.GetAsync<string>("userkey");
+        string key2 = result.Success ? result.Value : "";
+        var result2 = await _protectedLocalStorage.GetAsync<string>("userdir");
+        string dir2 = result2.Success ? result2.Value : "";
+        var result3 = await _protectedLocalStorage.GetAsync<string>("dname");
+        string dname2 = result3.Success ? result3.Value : "";
+
+        Console.WriteLine(key2);
+        Console.WriteLine(dir2);
+        Console.WriteLine(dname2);
+    }
+
+    //
+
+    List<Userkey> _userkeys2 = new List<Userkey>();
+
+    private async Task Read()
+    {
+        _userkeys2 = await _userkeyServices.GetUserkeyAsync();
+        if (CheckForDir())
+        {
+            await _protectedLocalStorage.SetAsync("userkey", inputtedKey);
+            await _protectedLocalStorage.SetAsync("userdir", correspondingDirectory);
+            await _protectedLocalStorage.SetAsync("dname", correspondingDisplayName);
+        }
+        else
+        {
+            message = "Error: Invalid key. Please ensure you are using your key and not your display name.";
+        }
+    }
+
+    private bool CheckForDir()
+    {
+        for (int i = 0; i < _userkeys2.Count; ++i)
+        {
+            if (_userkeys2.ElementAt(i).Key.Equals(inputtedKey))
+            {
+                correspondingDirectory = _userkeys2.ElementAt(i).Subdirectory;
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    //
+
+    private void CheckAccountStatus()
+    {
+        Check();
+    }
+
+    private async Task Check()
+    {
+    //read from browser's localstorage
+        var result = await _protectedLocalStorage.GetAsync<string>("userkey");
+        checkKey = result.Success ? result.Value : "";
+        var result2 = await _protectedLocalStorage.GetAsync<string>("userdir");
+        checkDir = result2.Success ? result2.Value : "";
+        
+        Console.WriteLine($"{key} {dir} {displayName}");
+
+    //if userkey and userdir both exist
+        if (!checkKey.Equals("") && !checkDir.Equals(""))
+        {
+            hideSuccess = false;
+            hideFailure = true;
+        }
+        else
+        {
+            hideFailure = false;
+            hideSuccess = true;
+        }
+    }
+
+}

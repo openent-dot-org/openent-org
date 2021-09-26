@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.10" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.10">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Syncfusion.Blazor.Inputs" Version="19.2.0.62" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="wwwroot\files" />
+      <Folder Include="wwwroot\icons" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\files\71D300692FC0D4323717F483D29C00EF60B2750FB282705B\almost_final.png" />
+      <_ContentIncludedByDefault Remove="wwwroot\files\71D300692FC0D4323717F483D29C00EF60B2750FB282705B\launchSettings.json" />
+    </ItemGroup>
+
+</Project>

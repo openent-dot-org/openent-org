@@ -1,0 +1,27 @@
+@page "/ViewFile"
+@page "/ViewFile/{FolderParameter}/{FileParameter}/{TypeParameter}"
+@layout CustomLayout
+
+<p>@FolderParameter</p>
+<p>@FileParameter</p>
+<iframe src="@path">Link</iframe>
+
+@code {
+    string path;
+
+    protected override void OnInitialized()
+    {
+        path = $"files/{FolderParameter}/{FileParameter}.{TypeParameter}";
+        Console.WriteLine($"{path}");
+    }
+
+    [Parameter]
+    public string FolderParameter { get; set; }
+
+    [Parameter]
+    public string FileParameter { get; set; }
+
+    [Parameter]
+    public string TypeParameter { get; set; }
+
+}

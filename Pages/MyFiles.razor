@@ -1,0 +1,220 @@
+@page "/MyFiles"
+@layout CustomLayout
+@using System.IO
+@using ECNcloud.Data
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using FileInfo = System.IO.FileInfo
+@inject ProtectedLocalStorage _protectedLocalStorage
+@inject NavigationManager _navigationManager
+
+<link rel="stylesheet" href="css/wrapper.css"/>
+<link rel="stylesheet" href="css/sidebars.css"/>
+<h3>My Files</h3>
+<p hidden="@accountErrorMessageHidden" style="color: #ed2939;">Error: User not logged in. <a href="/Login">[ Login ]</a></p>
+<div hidden="@hideUploaderAndFileListing">
+    <h5 style="color: #23ab87;">+ Upload</h5>
+    <div style="background: #ffffff;">
+        <SfUploader AutoUpload="false" MaxFileSize="BytesConversion.GiB(2)">
+            <UploaderEvents ValueChange="OnChange"></UploaderEvents>
+        </SfUploader>
+    </div>
+</div>
+
+@if (files != null)
+{
+    <div style="width: 100%; display: table;">
+        <div style="display: table-row">
+            <div style="width: 75%; display: table-cell;">
+                <ul>
+                    @foreach (var file in files)
+                    {
+                        <li>
+                            <div style="width: 100%; display: table;" class="sub-item">
+                                <div style="display: table-row">
+                                    <div style="width: 80%; display: table-cell;">
+                                        <button class="btn btn-link" @onclick="() => GetSelectedFileInfo(file.Substring(8))">@(Path.GetFileName(file))</button>
+                                    </div>
+                                    <div style="display: table-cell;">
+                                        <button class="btn btn-danger" @onclick="() => DeleteFile(file)">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div style="display: table-cell;">
+                <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark" style="width: 100%;">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                        <svg class="bi me-2" width="40" height="32">
+                            <use xlink:href="#bootstrap"/>
+                        </svg>
+                        <span class="fs-4">File info</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page">
+                                <svg class="bi me-2" width="16" height="16">
+                                    <use xlink:href="#home"/>
+                                </svg>
+                                @filepath
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white">
+                                <svg class="bi me-2" width="16" height="16">
+                                    <use xlink:href="#speedometer2"/>
+                                </svg>
+                                @filesize
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white">
+                                <svg class="bi me-2" width="16" height="16">
+                                    <use xlink:href="#speedometer2"/>
+                                </svg>
+                                @created
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link text-white">
+                                <svg class="bi me-2" width="16" height="16">
+                                    <use xlink:href="#speedometer2"/>
+                                </svg>
+                                @modified
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@(shareLink)" class="nav-link" style="color: #0099cc;">
+                                <svg class="bi me-2" width="16" height="16">
+                                    <use xlink:href="#speedometer2"/>
+                                </svg>
+                                Share Link
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@(downloadLink)" target="_blank" download class="nav-link" style="color: #0099cc;">
+                                <svg class="bi me-2" width="16" height="16">
+                                    <use xlink:href="#speedometer2"/>
+                                </svg>
+                                Download Link
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<button class="btn btn-secondary" @onclick="Unlock">Unlock</button>
+
+@code {
+    string key;
+    string dir;
+    string displayName;
+    string message;
+    bool accountErrorMessageHidden = true;
+    bool hideUploaderAndFileListing = true;
+    string[] files;
+
+    string filepath = "Select a file";
+    string filesize = "File size";
+    string created = "Time created";
+    string modified = "Time modified";
+    string shareLink = "Share link";
+    string downloadLink = "Download link";
+
+    private void GetSelectedFileInfo(string origPath)
+    {
+        string path = $"wwwroot/{origPath}";
+        FileInfo fi = new FileInfo(path);
+
+    //FILE PATH
+        double size = fi.Length; //SIZE
+        DateTime created2 = fi.CreationTimeUtc; //CREATION TIME
+        DateTime modified2 = fi.LastWriteTimeUtc; //MODIFIED TIME
+        string shareLink2 = GetShareLink(path); //SHARE LINK
+        string downloadLink2 = origPath; //DOWNLOAD LINK
+
+        filepath = Path.GetFileName(path);
+        filesize = $"{BytesConversion.BytesToKiB(size)} KiB";
+        created = $"Created {created2.ToString("yyyy-MM-dd @ HH:mm:ss UTC")}";
+        modified = $"Modified {modified2.ToString("yyyy-MM-dd @ HH:mm:ss UTC")}";
+        shareLink = shareLink2;
+        downloadLink = downloadLink2;
+    }
+
+    private void DeleteFile(string path)
+    {
+        File.Delete(path);
+        _navigationManager.NavigateTo(_navigationManager.Uri, true);
+    }
+
+    private string GetShareLink(string path)
+    {
+        string x = path;
+        Console.WriteLine(x);
+        x = x.Substring(14);
+        string y = ReplaceLastOccurrence(x, ".", "/");
+        Console.WriteLine(y);
+        return $"viewfile/{y}";
+    }
+
+    public static string ReplaceLastOccurrence(string Source, string Find, string Replace)
+    {
+        int place = Source.LastIndexOf(Find);
+
+        if (place == -1)
+            return Source;
+
+        string result = Source.Remove(place, Find.Length).Insert(place, Replace);
+        return result;
+    }
+
+    private async Task Unlock()
+    {
+    //read from browser's localstorage
+        var result = await _protectedLocalStorage.GetAsync<string>("userkey");
+        key = result.Success ? result.Value : "";
+        var result2 = await _protectedLocalStorage.GetAsync<string>("userdir");
+        dir = result2.Success ? result2.Value : "";
+        var result3 = await _protectedLocalStorage.GetAsync<string>("dname");
+        displayName = result3.Success ? result3.Value : "";
+
+        Console.WriteLine($"{key} {dir} {displayName}");
+
+    //if userkey or userdir does not exist
+        if (key.Equals("") || dir.Equals(""))
+        {
+            accountErrorMessageHidden = false;
+            Console.WriteLine("[ Error ] Key or directory missing.");
+        }
+        else
+        {
+            hideUploaderAndFileListing = false;
+        }
+
+    //scan through directory, store file paths in an array
+        if (Directory.Exists($"wwwroot/files/{dir}"))
+        {
+            files = Directory.GetFiles($"wwwroot/files/{dir}");
+        }
+    }
+
+    private void OnChange(UploadChangeEventArgs args)
+    {
+        foreach (var file in args.Files)
+        {
+            Directory.CreateDirectory($"wwwroot/files/{dir}");
+            var path = $"wwwroot/files/{dir}/{file.FileInfo.Name}";
+            Console.WriteLine(path);
+            FileStream filestream = new FileStream(path, FileMode.Create, FileAccess.Write);
+            file.Stream.WriteTo(filestream);
+            filestream.Close();
+            file.Stream.Close();
+        }
+    }
+
+}

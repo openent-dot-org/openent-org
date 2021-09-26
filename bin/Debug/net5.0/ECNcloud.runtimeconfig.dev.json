@@ -1,0 +1,9 @@
+{
+  "runtimeOptions": {
+    "additionalProbingPaths": [
+      "C:\\Users\\root\\.dotnet\\store\\|arch|\\|tfm|",
+      "C:\\Users\\root\\.nuget\\packages",
+      "J:\\sf2\\WPF\\19.2.0.44\\ToolboxNuGetPackages"
+    ]
+  }
+}
